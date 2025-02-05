@@ -658,17 +658,16 @@ if not df.empty:
             yaxis='y2'
         ))
 
-        # Update layout for dual y-axes
         fig.update_layout(
             xaxis_title="Outlier Level",
             yaxis=dict(
                 title="Claim Amount",
-                titlefont=dict(color="gray"),  # Blue for Claim Amount axis
+                title_font=dict(color="gray"),  # Correct property name
                 tickfont=dict(color="gray")
             ),
             yaxis2=dict(
                 title="Number of Claims",
-                title_font=dict(color="gray"),  # Gray for Claim Count axis
+                title_font=dict(color="gray"),  # Correct property name
                 tickfont=dict(color="gray"),
                 overlaying='y',
                 side='right'
