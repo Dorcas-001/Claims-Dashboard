@@ -668,7 +668,7 @@ if not df.empty:
             ),
             yaxis2=dict(
                 title="Number of Claims",
-                titlefont=dict(color="gray"),  # Gray for Claim Count axis
+                title_font=dict(color="gray"),  # Gray for Claim Count axis
                 tickfont=dict(color="gray"),
                 overlaying='y',
                 side='right'
