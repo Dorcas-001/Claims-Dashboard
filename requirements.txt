@@ -1,0 +1,15 @@
+streamlit
+plotly
+pandas
+matplotlib
+seaborn
+openpyxl
+altair
+pillow
+pymongo
+bcrypt
+streamlit==1.24.0
+pandas==1.5.3
+plotly==5.14.0
+bcrypt==4.0.1
+altair==4.2.2
