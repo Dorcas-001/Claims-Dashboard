@@ -146,7 +146,7 @@ df_claims['Claim Created Date'] = pd.to_datetime(df_claims['Claim Created Date']
 
 claims_aggregated = df_claims.groupby(['Client Name', 'Product', 'Year']).agg({
     'Claim Amount': 'sum'
-}).reset_index().rename(columns={'Claim Amount': 'Total Claims'})
+}).reset_index().rename(columns={'Claim Amount': 'Total Claims Amount'})
 
 matched_data = pd.merge(
     claims_aggregated,
@@ -156,7 +156,7 @@ matched_data = pd.merge(
 )
 
 # Fill missing values
-matched_data['Total Claims'] = matched_data['Total Claims'].fillna(0)
+matched_data['Total Claims'] = matched_data['Total Claims Amount'].fillna(0)
 matched_data['Earned Premium'] = matched_data['Earned Premium'].fillna(0)
 
 matched_data
