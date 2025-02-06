@@ -346,6 +346,7 @@ if not df.empty:
         </style>
         """, unsafe_allow_html=True)
 
+    st.dataframe(df)
 
 
     # Function to display metrics in styled boxes with tooltips
@@ -382,7 +383,6 @@ if not df.empty:
     display_metric(cols2, "Average Claim Amount Per Client", F"{average_amount:,.0F} M")
     display_metric(cols3, "Average Claim Amount Per Client", F"{average_app_amount: ,.0F} M")
 
-    st.dataframe(df)
     custom_colors = ["#009DAE", "#e66c37", "#461b09", "#f8a785", "#CC3636","#9ACBD0"]
 
     cols1, cols2 = st.columns(2)

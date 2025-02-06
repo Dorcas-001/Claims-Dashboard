@@ -2,51 +2,59 @@
     "users": [
         {
             "username": "Dorcas",
-            "password": "$2b$12$hOICLeJg2pUkbRB0Vn9pl.gtCHTOlHHqxwfjHkNE2gX/4UsXzTgqq"
+            "password": "$2b$12$ubXZ2wIloMymFiI7aNKCFuFkTXECYEXoQdjJ3ova54qz3gv1WuRRm"
         },
         {
             "username": "Tshepo",
-            "password": "$2b$12$jR1jS5Xl5Ld0.hTBnVMEM.HAP19Z4oyl7W2Jr.DaY1vVz5jy5OpSm"
+            "password": "$2b$12$i05/72EbTmezJKmZL25ZJ.J.EPp0JmMQdHPUo3do2HJ/nXNXa6E6C"
         },
         {
             "username": "Innocent",
-            "password": "$2b$12$EJkJl5eL304G2oM0u9aQcOaRqFxbB3Ha8iJ8JJKoxMPxOtrY8OvFa"
+            "password": "$2b$12$FSSfRCnvbJbxqDCSPRfeMugEjjQLAXRSeOa4LSMDMEMcvYfMe20l6"
         },
         {
             "username": "Bruce",
-            "password": "$2b$12$DyrFaH2Fyq1sR7aJDDe9UOOkPxwHhRxIQCzo.mszvUTC4I/5hs1wG"
+            "password": "$2b$12$vbPIRoIBIvafmMDO/O0cl.JVNV50Op1e/7H8dkqK8wvds.s2kp3Dy"
         },
         {
             "username": "Penny",
-            "password": "$2b$12$.tlbS3WRRQ7.k9f0Gqmy2eSrP9QnD3f0YrHg1zqF2MM7fCwmc/MeO"
+            "password": "$2b$12$.wa8JtQ4aTiHthPk701fOeDf7VTCFj6x/aUIxx82gtHM.zNdyPKdS"
         },
         {
             "username": "Kevin R",
-            "password": "$2b$12$eS2YnexG.NghypICEuj4F.TdLqhFKRIJXXw4xVRDZV.UCGgz0KDHu"
+            "password": "$2b$12$wDW8KUaODXy9qK3HJpw6o..Y56uMWI0foYWsTJg0XTvyr8gs./Mma"
         },
         {
             "username": "Kevin K",
-            "password": "$2b$12$ekmylkkHIjSwdhPaD0JUiea4ggnUSxW6CbWXhd9wGZhpYDlPO8bU2"
+            "password": "$2b$12$VblmiuiPun1yjrEa0H63luGOpMgZiJPhubkVeHAYhujhxAP26dHHy"
         },
         {
             "username": "Carmen",
-            "password": "$2b$12$lENkmtHOrpWaQfwTrFcXQOArVyWy7G9WI1PoVM8jEPiFPnMFS/bQu"
+            "password": "$2b$12$N217gVoNX/sbg8rxFGwKtu6jtqf85HqNaWotLjy5TzhMBubuxaaB6"
         },
         {
             "username": "Frank",
-            "password": "$2b$12$YIYQx.5gfa2SNbHXLvciR.LEkArp5mUakgPmp9EY.jcaqHaOY16Qq"
+            "password": "$2b$12$PEZCORgoFFJ87UhyWmNa7.KUfbvnopRY9tpWAkZQNJCqyEW4qyUu6"
         },
         {
             "username": "Bishosi",
-            "password": "$2b$12$dCi6He/bppgf6gluonhFzO645pfn89Qynan04yEtvnqdnt8jVwbzO"
+            "password": "$2b$12$hMfh64LClvwo4tGeuPW5c.SS5l.zjvqSBSF5wip3cKUldOsxi4M0y"
         },
         {
             "username": "Michel",
-            "password": "$2b$12$jGKooiTwILII0Jf2zVvKyOj4CQgtAU9XU5sHshT.l.iJ4YAFYUQ32"
+            "password": "$2b$12$.Xs7HvY4menbM0FGhMsdRu/8mtT.ukDuytFUfi3M7prN7K85bcZMe"
         },
         {
             "username": "Stella",
-            "password": "$2b$12$qjIlIGxUESrdiqoqbXn.keLmtBEzksvVm8NDcgqTI5akb393wqPVy"
+            "password": "$2b$12$PkD.o/xl2IQen3hXfV5XROCw/ooIyQaTWycNbX9oCSWXwlp3fXsaq"
+        },
+        {
+            "username": "Kameron",
+            "password": "$2b$12$TBvS7EQ65/gdTXiS.1cFf.3h5it7iUeANyDcif3LhZD11mkB/FBpG"
+        },
+        {
+            "username": "Steffany",
+            "password": "$2b$12$WI32o64lewio5yJdzCsy..AnvvYv5zJiKY6POmLZOLrjOV18fzNnm"
         }
     ]
 }

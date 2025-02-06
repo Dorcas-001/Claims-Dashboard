@@ -85,7 +85,7 @@ def display_dashboard(username):
     logo_url = 'EC_logo.png'  
     st.sidebar.image(logo_url, use_column_width=True)
 
-    page = st.sidebar.selectbox("Choose a dashboard", ["Home", "Overview", "Claims Analysis", "Claims Analysis - Fraud", "Claims Analysis - Loss Ratio", "Claim Type View"])
+    page = st.sidebar.selectbox("Choose a dashboard", ["Home", "Overview", "Claims Analysis", "Claims Analysis - Fraud", "Claims Analysis - Loss Ratio", "Product View", "Claim Type View"])
 
     st.markdown(
         """
@@ -182,10 +182,15 @@ def display_dashboard(username):
         exec(open("overview.py").read())
     elif page == "Claims Analysis":
         exec(open("claim_analysis.py").read())
-    elif page == "Visit Type View":
-        exec(open("visit_type.py").read())
+    elif page == "Claims Analysis - Loss Ratio":
+        exec(open("loss_ratio.py").read())
+    elif page == "Product View":
+        exec(open("product.py").read())
+    elif page == "Claim Type View":
+        exec(open("claim_type.py").read())
     elif page == "Claims Analysis - Fraud":
         exec(open("fraud.py", encoding="utf-8").read())   
+
 
 # Streamlit app
 def main():

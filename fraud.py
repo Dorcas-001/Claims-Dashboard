@@ -376,7 +376,7 @@ if not df.empty:
         </style>
         """, unsafe_allow_html=True)
 
-
+    st.dataframe(df)
 
     # Function to display metrics in styled boxes with tooltips
     def display_metric(col, title, value):
