@@ -5,16 +5,12 @@ users = [
     {"username": "Tshepo", "password": "Tshepo@EC"},
     {"username": "Innocent", "password": "Innocent@EC"},
     {"username": "Bruce", "password": "Bruce@EC"},
-    {"username": "Penny", "password": "Penny@EC"},
     {"username": "Kevin R", "password": "KevinR@EC"},
-    {"username": "Kevin K", "password": "KevinK@EC"},
-    {"username": "Carmen", "password": "Carmen@EC"},
-    {"username": "Frank", "password": "Frank@EC"},
-    {"username": "Bishosi", "password": "Bishosi@EC"},
     {"username": "Michel", "password": "Michel@EC"},
     {"username": "Stella", "password": "Stella@EC"},
     {"username": "Kameron", "password": "Kameron@EC"},
-    {"username": "Steffany", "password": "Steffany@EC"}
+    {"username": "Steffany", "password": "Steffany@EC"},
+    {"username": "Francis", "password": "Francis@EC"}
 ]
 
 def hash_password(password):
