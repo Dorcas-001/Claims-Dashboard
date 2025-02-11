@@ -986,7 +986,7 @@ if not df.empty:
             margin=dict(l=0, r=0, t=50, b=50),
             height=500,
         )
-        st.markdown('<h3 class="custom-subheader">Top 10 Employer Groups by Loss Ratio Rate"</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="custom-subheader">Top 10 Employer Groups by Loss Ratio Rate</h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_loss_ratio_by_client, use_container_width=True)
     
     with cols1:
