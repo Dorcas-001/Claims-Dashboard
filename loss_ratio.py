@@ -995,8 +995,8 @@ if not df.empty:
         fig_loss_vs_premium = go.Figure()
 
         fig_loss_vs_premium.add_trace(go.Scatter(
-            x=df['Earned Premium'],
-            y=df['Loss Ratio Rate'],
+            x=df['Loss Ratio Rate'],
+            y=df['Earned Premium'],
             mode='markers',
             name='Loss Ratio vs Earned Premium',
             marker=dict(color='#009DAE', size=10),
@@ -1014,39 +1014,6 @@ if not df.empty:
             margin=dict(l=0, r=0, t=50, b=50),
             height=500,
         )
-        st.markdown('<h3 class="custom-subheader">Loss Ratio Rate vs Earned Premium"</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="custom-subheader">Earned Premium vs Loss Ratio Rate by Product</h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_loss_vs_premium, use_container_width=True)
 
-    with cols2:
-        # Pivot the data to create a heatmap
-        heatmap_data = df.pivot_table(
-            index='Year',
-            columns='Product',
-            values='Loss Ratio Rate',
-            aggfunc='mean'
-        ).fillna(0)
-
-        # Create a heatmap
-        fig_loss_heatmap = go.Figure(data=go.Heatmap(
-            z=heatmap_data.values,
-            x=heatmap_data.columns,
-            y=heatmap_data.index,
-            colorscale='RdBu',
-            colorbar=dict(title="Loss Ratio Rate (%)"),
-            text=heatmap_data.applymap(lambda x: f"{x:.1f}%"),
-            hoverinfo='text+z'
-        ))
-
-        # Update layout
-        fig_loss_heatmap.update_layout(
-            xaxis_title="Product",
-            yaxis_title="Year",
-            font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            margin=dict(l=0, r=0, t=50, b=50),
-            height=500,
-        )
-        st.markdown('<h3 class="custom-subheader">Loss Ratio Rate Heatmap by Year and Product"</h3>', unsafe_allow_html=True)
-
-        st.plotly_chart(fig_loss_heatmap, use_container_width=True)
