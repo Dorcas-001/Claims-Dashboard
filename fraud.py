@@ -28,7 +28,7 @@ st.markdown('''
     </style>
 ''', unsafe_allow_html=True)
 
-st.markdown('<h2 class="main-title">CLAIMS ANALYSIS - FRAUD MANAGEMENT</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="main-title">CLAIMS ANALYSIS - ABNORMALITIES</h2>', unsafe_allow_html=True)
 
 
 
