@@ -1006,8 +1006,8 @@ if not df.empty:
 
         # Update layout
         fig_loss_vs_premium.update_layout(
-            xaxis_title="Earned Premium (M)",
-            yaxis_title="Loss Ratio Rate (%)",
+            yaxis_title="Earned Premium (M)",
+            xaxis_title="Loss Ratio Rate (%)",
             font=dict(color='Black'),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
