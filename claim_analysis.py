@@ -346,7 +346,6 @@ if not df.empty:
         </style>
         """, unsafe_allow_html=True)
 
-    st.dataframe(df)
 
 
     # Function to display metrics in styled boxes with tooltips
@@ -419,10 +418,10 @@ if not df.empty:
         fig2.update_xaxes(title_text="Claim Created Date", tickangle=45)  # Rotate x-axis labels to 45 degrees for better readability
 
         # Set y-axes titles
-        fig2.update_yaxes(title_text="<b>Number Of Visits</b>", secondary_y=False)
+        fig2.update_yaxes(title_text="<b>Number Of Claims</b>", secondary_y=False)
         fig2.update_yaxes(title_text="<b>Claim Amount</b>", secondary_y=True)
 
-        st.markdown('<h3 class="custom-subheader">Number of Visits and Claim Amount Over Time</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="custom-subheader">Number of Claims and Claim Amount Over Time</h3>', unsafe_allow_html=True)
 
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -645,38 +644,61 @@ if not df.empty:
         st.plotly_chart(create_dual_axis_chart(df_grouped_icd, "ICD-10 Code", "Claim Amount", "Number of Claims", "ICD-10 Code"), use_container_width=True)
 
 
-    # Group by Source and sum the Claim Amount
-    df_source_grouped = df.groupby('Source')['Claim Amount'].sum().reset_index()
+    # Group by Source and calculate the total number of claims and total claim amount
+    df_source_grouped = df.groupby('Source').agg(
+        Total_Claims=pd.NamedAgg(column='Claim ID', aggfunc='count'),
+        Total_Claim_Amount=pd.NamedAgg(column='Claim Amount', aggfunc='sum')
+    ).reset_index()
 
-    # Sort the df_source_grouped by Claim Amount in descending order
-    df_source_grouped = df_source_grouped.sort_values(by='Claim Amount', ascending=False)
+    # Sort the df_source_grouped by Total_Claims in descending order to find the most popular provider type
+    df_source_grouped = df_source_grouped.sort_values(by='Total_Claims', ascending=False)
 
+    # Get the most popular provider type
+    most_popular_provider = df_source_grouped.iloc[0]['Source'] if not df_source_grouped.empty else "No Data"
+
+    # Format Claim Amount with millions
+    df_source_grouped['Claim_Amount_Formatted'] = df_source_grouped['Total_Claim_Amount'].apply(lambda x: f'{x/1e6:.0f}M')
+
+    # Create the grouped bar chart
     with cls1:
-        # Create the bar chart
         fig1 = go.Figure()
 
-        # Add bars for each Source
+        # Add bars for Total Claims
         fig1.add_trace(go.Bar(
             x=df_source_grouped['Source'],
-            y=df_source_grouped['Claim Amount'],
-            text=[f'{value/1e6:.0f}M' for value in df_source_grouped['Claim Amount']],
+            y=df_source_grouped['Total_Claims'],
+            name='Number of Claims',
+            text=df_source_grouped['Total_Claims'],
+            textposition='auto',
+            marker_color="#e66c37"
+        ))
+
+        # Add bars for Total Claim Amount
+        fig1.add_trace(go.Bar(
+            x=df_source_grouped['Source'],
+            y=df_source_grouped['Total_Claim_Amount'],
+            name='Claim Amount',
+            text=df_source_grouped['Claim_Amount_Formatted'],  # Use formatted text
             textposition='auto',
             marker_color="#009DAE"
         ))
 
+        # Update layout for the grouped bar chart
         fig1.update_layout(
-            yaxis_title="Claim Amount",
-            xaxis_title="Source",
+            barmode='group',  # Grouped bar chart
+            yaxis_title="Value",
+            xaxis_title="Provider Type",
             font=dict(color='Black'),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            margin=dict(l=0, r=0, t=30, b=50)
+            margin=dict(l=0, r=0, t=30, b=50),
+            height=500,
+            legend=dict(title="Metrics")
         )
 
         # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Provider Type by Claim Amount</h3>', unsafe_allow_html=True)
+        st.markdown(f'<h3 class="custom-subheader">Most Popular Provider Type: {most_popular_provider}</h3>', unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
-
 
 
     # Group by Employer Name and Claim Status, then sum the Claim Amount

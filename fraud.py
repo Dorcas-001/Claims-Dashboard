@@ -449,7 +449,7 @@ if not df.empty:
     custom_colors = {
         "Normal": "#009DAE",          # Teal for Normal claims
         "Mild Outlier": "#461b09",    # Dark brown for Mild Outliers
-        "Extreme Outlier": "red"      # Red for Extreme Outliers
+        "Extreme Outlier": "#e66c37"      # Red for Extreme Outliers
     }
 
     # Mild outlier bounds
