@@ -596,10 +596,19 @@ if not df.empty:
         .reset_index(name="Count")
     )
 
-    monthly_outliers["Month_Order"] = monthly_outliers["Month"].apply(
-        lambda x: sorted_months.index(x) if x in sorted_months else len(sorted_months)
+    # Define the correct order of months
+    sorted_months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+
+    # Convert the 'Month' column to a categorical type with the specified order
+    monthly_outliers['Month'] = pd.Categorical(
+        monthly_outliers['Month'], categories=sorted_months, ordered=True
     )
-    monthly_outliers = monthly_outliers.sort_values(by="Month_Order")
+
+    # Sort by the 'Month' column
+    monthly_outliers = monthly_outliers.sort_values(by="Month")
 
     cols1, cols2 = st.columns(2)
 
