@@ -76,7 +76,7 @@ month_order = {
     "September": 9, "October": 10, "November": 11, "December": 12
 }
 current_date = datetime.now()
-
+sorted_months = sorted(df['Month'].dropna().unique(), key=lambda x: pd.to_datetime(x, format='%B').month)
 
 
 # Function to display the dashboard
