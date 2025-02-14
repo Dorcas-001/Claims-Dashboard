@@ -278,71 +278,66 @@ df = df[
 ]
 
 
-df
-df_outlier = df[df['Outlier Level'] == 'Extreme Outlier']
-df_normal = df[df['Outlier Level'] == 'Normal']
-df_mild = df[df['Outlier Level'] == 'Mild Outlier']
-
-df_out = df[df['Claim Type'] == 'Outpatient']
-df_dental = df[df['Claim Type'] == 'Dental']
-df_wellness = df[df['Claim Type'] == 'Wellness']
-df_optical = df[df['Claim Type'] == 'Optical']
-df_phar = df[df['Claim Type'] == 'Pharmacy']
-df_mat = df[df['Claim Type'] == 'Maternity']
-df_pro = df[df['Claim Type'] == 'ProActiv']
-df_in = df[df['Claim Type'] == 'Inpatient']
-
+# Filter data by product type
 df_health = df[df['Product'] == 'Health Insurance']
 df_proactiv = df[df['Product'] == 'ProActiv']
 
+# Filter data by claim status
 df_app = df[df['Claim Status'] == 'Approved']
 df_dec = df[df['Claim Status'] == 'Declined']
 
 if not df.empty:
+    scale = 1_000_000  # For millions
+    scaling = 1000  # For thousands
 
-    scale=1_000_000  # For millions
+    # General Metrics
+    total_claim_amount = (df["Claim Amount"].sum()) / scale
+    average_amount = (df["Claim Amount"].mean()) / scaling
+    average_app_amount = (df["Approved Claim Amount"].mean()) / scaling
 
-    total_claim_amount = (df["Claim Amount"].sum())/scale
-    total_claim_amount
-    average_amount =(df["Claim Amount"].mean())/scale
-    average_app_amount =(df["Approved Claim Amount"].mean())/scale
-
-    total_out = (df_out['Claim Amount'].sum())/scale
-    total_dental = (df_dental['Claim Amount'].sum())/scale
-    total_wellness = (df_wellness['Claim Amount'].sum())/scale
-    total_optical = (df_optical['Claim Amount'].sum())/scale
-    total_in = (df_in['Claim Amount'].sum())/scale
-    total_phar = (df_phar['Claim Amount'].sum())/scale
-    total_pro = (df_pro['Claim Amount'].sum())/scale
-    total_mat = (df_mat['Claim Amount'].sum())/scale
-
-    total_app_claim_amount = (df_app["Claim Amount"].sum())/scale
-    total_dec_claim_amount = (df_dec["Claim Amount"].sum())/scale
+    total_app_claim_amount = (df_app["Approved Claim Amount"].sum()) / scale
+    total_dec_claim_amount = (df_dec["Claim Amount"].sum()) / scaling
 
     total_app = df_app["Claim ID"].nunique()
     total_dec = df_dec["Claim ID"].nunique()
 
-    total_health_claim_amount = (df_app["Claim Amount"].sum())/scale
-    total_pro_claim_amount = (df_dec["Claim Amount"].sum())/scale
-
-    total_health = df_health["Claim ID"].nunique()
-    total_proactiv = df_proactiv["Claim ID"].nunique()
-
     total_clients = df["Employer Name"].nunique()
     total_claims = df["Claim ID"].nunique()
 
+    approval_rate = (total_app / total_claims) * 100 if total_claims > 0 else 0
+    denial_rate = (total_dec / total_claims) * 100 if total_claims > 0 else 0
 
-    total_app_per = (total_app/total_claims)*100
-    total_dec_per = (total_dec/total_claims)*100
+    # Fraud-Specific Metrics (IQR-Based)
+    Q1 = df['Claim Amount'].quantile(0.25)
+    Q3 = df['Claim Amount'].quantile(0.75)
+    IQR = Q3 - Q1
+    mild_upper = Q3 + 1.5 * IQR
+    extreme_upper = Q3 + 3 * IQR
 
-    total_outlier = (df_outlier["Claim Amount"].sum())/scale
-    total_normal = (df_normal["Claim Amount"].sum())/scale
-    total_mild = (df_mild["Claim Amount"].sum())/scale
+    def classify_outlier(value):
+        if value > extreme_upper:
+            return "Extreme Outlier"
+        elif value > mild_upper:
+            return "Mild Outlier"
+        else:
+            return "Normal"
 
-    percent_app = (total_app_claim_amount/total_claim_amount) *100
+    df['Outlier Level'] = df['Claim Amount'].apply(classify_outlier)
 
+    total_mild_outliers = (df['Outlier Level'] == 'Mild Outlier').sum()
+    total_extreme_outliers = (df['Outlier Level'] == 'Extreme Outlier').sum()
+    total_normal_outliers = (df['Outlier Level'] == 'Normal').sum()
 
-    # Create 4-column layout for metric cards# Define CSS for the styled boxes and tooltips
+    # High-Frequency Providers/Members
+    top_providers = df.groupby('Provider Name')['Claim ID'].count().nlargest(5).reset_index()
+    top_members = df.groupby('Member Name')['Claim ID'].count().nlargest(5).reset_index()
+
+    # Discrepancies Between Requested and Approved Amounts
+    df['Amount Discrepancy'] = abs(df['Claim Amount'] - df['Approved Claim Amount'])
+    avg_discrepancy = df['Amount Discrepancy'].mean()
+    high_discrepancy_claims = df[df['Amount Discrepancy'] > avg_discrepancy * 2]['Claim ID'].nunique()  # Claims with discrepancies > 2x average
+
+    # Define CSS for the styled boxes and tooltips
     st.markdown("""
         <style>
         .custom-subheader {
@@ -372,11 +367,8 @@ if not df.empty:
             color: #009DAE;
             font-size: 1em;
         }
-
         </style>
         """, unsafe_allow_html=True)
-
-    st.dataframe(df)
 
     # Function to display metrics in styled boxes with tooltips
     def display_metric(col, title, value):
@@ -387,141 +379,204 @@ if not df.empty:
             </div>
             """, unsafe_allow_html=True)
 
-
-   # Calculate key metrics
-    st.markdown(f'<h2 class="custom-subheader">For all Claims in Numbers ({filter_description.strip()})</h2>', unsafe_allow_html=True)    
-
-    cols1,cols2, cols3 = st.columns(3)
-
+    # Display general metrics
+    st.markdown('<h2 class="custom-subheader">General Metrics</h2>', unsafe_allow_html=True)
+    cols1, cols2, cols3 = st.columns(3)
     display_metric(cols1, "Number of Clients", total_clients)
-    display_metric(cols2, "Number of Claims", total_claims)
-    display_metric(cols3, "Number of Approved Claims", total_app)
-    display_metric(cols1, "Number of Declined Claims",total_dec)
-    display_metric(cols2, "Percentage Approved", F"{total_app_per: .0F} %")
-    display_metric(cols3, "Percentage Declined", F"{total_dec_per: .0F} %")
+    display_metric(cols2, "Number of Claims", f"{total_claims:,}")
+    display_metric(cols3, "Total Claim Amount", f"{total_claim_amount:,.0f} M")
+    display_metric(cols1, "Approval Rate", f"{approval_rate:.2f} %")
+    display_metric(cols2, "Denial Rate", f"{denial_rate:.2f} %")
+    display_metric(cols3, "Average Claim Amount", f"{average_amount:,.1f} K")
 
-    # Calculate key metrics
-    st.markdown(f'<h2 class="custom-subheader">For all Claim Amounts ({filter_description.strip()})</h2>', unsafe_allow_html=True)    
+    # Display fraud-specific metrics
+    st.markdown('<h2 class="custom-subheader">Fraud Detection Metrics</h2>', unsafe_allow_html=True)
+    cols1, cols2, cols3, cols4 = st.columns(4)
 
-    cols1,cols2, cols3 = st.columns(3)
+    display_metric(cols1, "Normal Claims", total_normal_outliers)
+    display_metric(cols2, "Mild Outliers", total_mild_outliers)
+    display_metric(cols3, "Extreme Outliers", total_extreme_outliers)
+    display_metric(cols4, "High Discrepancy Claims", high_discrepancy_claims)
 
-    display_metric(cols1, "Total Claims", total_claims)
-    display_metric(cols2, "Total Claim Amount", f"{total_claim_amount:,.0f} M")
-    display_metric(cols3, "Total Approved Claim Amount", f"{total_app_claim_amount:,.0f} M")
-    display_metric(cols1, "Total Declined Claim Amount", f"{total_dec_claim_amount:,.0f} M")
-    display_metric(cols2, "Average Claim Amount Per Client", F"{average_amount:,.0F} M")
-    display_metric(cols3, "Average Claim Amount Per Client", F"{average_app_amount: ,.0F} M")
 
-    # Calculate key metrics
-    st.markdown(f'<h2 class="custom-subheader">For all Claim Amounts ({filter_description.strip()})</h2>', unsafe_allow_html=True)    
+    custom_colors = ["#009DAE", "#e66c37", "#461b09", "#f8a785", "#9ACBD0","#CC3636"]
 
-    # Function to display a colored metric
-    def display_colored_metric(column, title, value, color):
-        column.markdown(
-            f"""
-            <div style="
-                background-color: {color}; 
-                padding: 10px; 
-                border-radius: 10px; 
-                text-align: center; 
-                color: white; 
-                font-size: 18px;">
-                <b>{title}</b><br>
-                {value}
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-
-    # Define custom colors for Outlier levels
-
-    normal_color = "#009DAE"  
-    mild_outlier_color = "#e66c37"  
-    outlier_color = "red"
-
-    cols1,cols2, cols3 = st.columns(3)
-    # Display metrics with colors
-    display_colored_metric(cols1, "Total Normal Claim Amount", f"{total_normal:,.1f} M", normal_color)
-    display_colored_metric(cols2, "Total Mild Outlier Claim Amount", f"{total_mild:,.1f} M", mild_outlier_color)
-    display_colored_metric(cols3, "Total Extreme Outlier Claim Amount", f"{total_outlier:,.1f} M", outlier_color)
-
-    st.dataframe(df)
-    custom_colors = {
-        "Normal": "#009DAE",          # Teal for Normal claims
-        "Mild Outlier": "#461b09",    # Dark brown for Mild Outliers
-        "Extreme Outlier": "#e66c37"      # Red for Extreme Outliers
-    }
-
-    # Mild outlier bounds
-    mild_lower = Q1 - 1.5 * IQR
-    mild_upper = Q3 + 1.5 * IQR
-
-    # Extreme outlier bounds
-    extreme_lower = Q1 - 3 * IQR
-    extreme_upper = Q3 + 3 * IQR
-
-    # Create two columns
     col1, col2 = st.columns(2)
 
-    # --- 1️⃣ YEARLY CLAIM AMOUNT BY OUTLIER LEVEL ---
+    # Group data by Claim Created Date and Outlier Level, and count occurrences
+    outlier_count = (
+        df.groupby([df["Claim Created Date"].dt.strftime("%Y-%m-%d"), "Outlier Level"])
+        .size()
+        .reset_index(name="Count")
+    )
+
+    # Pivot the data for plotting (Outlier Level as columns)
+    pivot_outlier = outlier_count.pivot(
+        index="Claim Created Date", columns="Outlier Level", values="Count"
+    ).fillna(0)
+
+    # Sort the data by date
+    pivot_outlier = pivot_outlier.sort_index()
+
     with col1:
-        yearly_outlier_summary = df.groupby(['Year', 'Outlier Level'])['Claim Amount'].sum().unstack().fillna(0)
+        # Create the stacked area chart
+        fig_outlier_time = go.Figure()
 
-        fig_yearly_outliers = go.Figure()
-        for outlier_level in yearly_outlier_summary.columns:
-            fig_yearly_outliers.add_trace(go.Bar(
-                x=yearly_outlier_summary.index,
-                y=yearly_outlier_summary[outlier_level],
-                name=outlier_level,
-                textposition='inside',
-                textfont=dict(color='white'),
-                hoverinfo='x+y+name',
-                marker_color=custom_colors.get(outlier_level, "gray")
-            ))
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(pivot_outlier.columns):
+            fig_outlier_time.add_trace(
+                go.Scatter(
+                    x=pivot_outlier.index,
+                    y=pivot_outlier[outlier_level],
+                    mode="lines",
+                    stackgroup="one",  # This creates a stacked area chart
+                    name=outlier_level,
+                    line=dict(width=0.5, color=custom_colors[i % len(custom_colors)]),
+                    hoverinfo="x+y+name",
+                    fillcolor=custom_colors[i % len(custom_colors)],
+                )
+            )
 
-        fig_yearly_outliers.update_layout(
-            barmode='group',
-            xaxis_title="Year",
-            yaxis_title="Total Claim Amount",
-            font=dict(color='Black'),
+        # Update layout
+        fig_outlier_time.update_layout(
+            xaxis_title="Claim Created Date",
+            yaxis_title="Number of Claims",
+            font=dict(color="Black"),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12), tickangle=45),
+            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            margin=dict(l=0, r=0, t=30, b=50),
+            legend=dict(x=0, y=1.1, orientation="h"),  # Place legend above the chart
+            height=450,
+        )
+
+        # Display the chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Outlier Distribution Over Time</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_outlier_time, use_container_width=True)
+
+    # Filter claims with high discrepancies
+    high_discrepancy_data = df[df["Amount Discrepancy"] > avg_discrepancy * 2]
+
+    # Group data by Provider Name to calculate total discrepancy
+    provider_discrepancy = (
+        high_discrepancy_data.groupby("Provider Name")["Amount Discrepancy"]
+        .sum()
+        .reset_index()
+    )
+
+    # Sort providers by total discrepancy
+    provider_discrepancy = provider_discrepancy.sort_values(by="Amount Discrepancy", ascending=False).head(10)
+
+    with col2:
+
+        # Create the bar chart
+        fig_discrepancy = go.Figure()
+
+        fig_discrepancy.add_trace(
+            go.Bar(
+                x=provider_discrepancy["Provider Name"],
+                y=provider_discrepancy["Amount Discrepancy"],
+                text=[f"{value / 1e3:.0f}K" for value in provider_discrepancy["Amount Discrepancy"]],
+                textposition="inside",
+                textfont=dict(color="white"),
+                hoverinfo="x+y",
+                marker_color="#009DAE",
+            )
+        )
+
+        # Update layout
+        fig_discrepancy.update_layout(
+            xaxis_title="Provider Name",
+            yaxis_title="Total Discrepancy ()",
+            font=dict(color="Black"),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12), tickangle=45),
+            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            margin=dict(l=0, r=0, t=50, b=50),
+            height=500,
+        )
+
+        # Display the chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Discrepancy Between Requested and Approved Amounts</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_discrepancy, use_container_width=True)
+
+    # Group by Outlier Level and sum the Claim Amount
+    outlier_claim_amount = (
+        df.groupby("Outlier Level")["Claim Amount"]
+        .sum()
+        .reset_index(name="Total Claim Amount")
+    )
+
+    # Sort by Total Claim Amount in descending order
+    outlier_claim_amount = outlier_claim_amount.sort_values(by="Total Claim Amount", ascending=False)
+
+    cols1, cols2 = st.columns(2)
+
+    with cols1:
+        # Create the bar chart for outliers by claim amount
+        fig_outlier_claim_amount = go.Figure()
+
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(outlier_claim_amount["Outlier Level"]):
+            fig_outlier_claim_amount.add_trace(
+                go.Bar(
+                    x=[outlier_level],  # Outlier Level as x-axis
+                    y=outlier_claim_amount.loc[outlier_claim_amount["Outlier Level"] == outlier_level, "Total Claim Amount"],
+                    name=outlier_level,
+                    text=[
+                        f"{value / 1e6:.1f}M"
+                        for value in outlier_claim_amount.loc[
+                            outlier_claim_amount["Outlier Level"] == outlier_level, "Total Claim Amount"
+                        ]
+                    ],  # Format text as X.M
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],  # Assign color based on index
+                )
+            )
+
+        # Set layout for the Outliers by Claim Amount chart
+        fig_outlier_claim_amount.update_layout(
+            barmode="stack",  # Stacked bar chart
+            xaxis_title="Outlier Level",
+            yaxis_title="Total Claim Amount ()",
+            font=dict(color="Black"),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             margin=dict(l=0, r=0, t=30, b=50),
-            height=450
+            height=500,
+            legend=dict(x=0, y=1.1, orientation="h"),  # Place legend above the chart
         )
 
-        st.markdown('<h3 class="custom-subheader">Yearly Claim Amount by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_yearly_outliers, use_container_width=True)
-        
+        # Display the Outliers by Claim Amount chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Outliers by Claim Amount</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_outlier_claim_amount, use_container_width=True)
 
-
-    # Group data by "Product" and "Outlier Level" and sum the Claim Amount
-    product_outliers = df.groupby(['Product', 'Outlier Level'])['Claim Amount'].sum().unstack().fillna(0)
-
+    # Group data by "Product" and "Outlier Level" and count the number of claims
+    product_outliers = df.groupby(['Product', 'Outlier Level'])['Claim ID'].count().unstack().fillna(0)
     # Ensure all outlier levels are present in the columns (even if some products don't have certain levels)
     product_outliers = product_outliers.reindex(columns=["Normal", "Mild Outlier", "Extreme Outlier"], fill_value=0)
 
-    with col1:
+    with cols2:
         fig_product_outliers = go.Figure()
 
         # Add traces for each Outlier Level
-        for outlier_level in product_outliers.columns:
+        for i, outlier_level in enumerate(product_outliers.columns):
             fig_product_outliers.add_trace(go.Bar(
                 x=product_outliers.index,
                 y=product_outliers[outlier_level],
                 name=outlier_level,
-                text=product_outliers[outlier_level].apply(lambda x: f"${x/1e6:.1f}M" if x > 0 else ""),  # Format text as $X.M
+                text=product_outliers[outlier_level].apply(lambda x: f"{x}" if x > 0 else ""),  # Show raw count
                 textposition='inside',
                 textfont=dict(color='white'),
                 hoverinfo='x+y+name',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
+                marker_color=custom_colors[i % len(custom_colors)],
             ))
 
-        # Set layout for the Claim Amount by Product and Outlier Level chart
+        # Set layout for the Number of Claims by Product and Outlier Level chart
         fig_product_outliers.update_layout(
             barmode='group',  # Grouped bar chart
             xaxis_title="Product",
-            yaxis_title="Claim Amount",
+            yaxis_title="Number of Claims",
             font=dict(color='Black'),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
@@ -529,190 +584,148 @@ if not df.empty:
             legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
         )
 
-        # Display the Claim Amount by Product and Outlier Level chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Outliers by Claim Amount and Product</h3>', unsafe_allow_html=True)
+        # Display the Number of Claims by Product and Outlier Level chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Outliers by Number of Claims and Product</h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_product_outliers, use_container_width=True)
 
-    # Group data by "Month" and "Outlier Level" and sum the Approved Claim Amount
-    monthly_premium = df.groupby(['Month', 'Outlier Level'])['Claim Amount'].sum().unstack().fillna(0)
 
-    # Group data by "Month" to count the number of claims
-    monthly_sales_count = df.groupby(['Month']).size()
+    # Group data by Month and Outlier Level to count occurrences
+    monthly_outliers = (
+        df.groupby(["Month", "Outlier Level"])["Claim ID"]
+        .count()
+        .reset_index(name="Count")
+    )
 
-    with col2:
-        fig_monthly_premium = go.Figure()
+    monthly_outliers["Month_Order"] = monthly_outliers["Month"].apply(
+        lambda x: sorted_months.index(x) if x in sorted_months else len(sorted_months)
+    )
+    monthly_outliers = monthly_outliers.sort_values(by="Month_Order")
 
-        # Add traces for each Outlier Level
-        for idx, outlier_level in enumerate(monthly_premium.columns):
-            fig_monthly_premium.add_trace(go.Bar(
-                x=monthly_premium.index,
-                y=monthly_premium[outlier_level],
-                name=outlier_level,
-                text=monthly_premium[outlier_level].apply(lambda x: f"${x/1e6:.1f}M" if x > 0 else ""),  # Format text as $X.M
-                textposition='inside',
-                textfont=dict(color='white'),
-                hoverinfo='x+y+name',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
+    cols1, cols2 = st.columns(2)
 
-        # Set layout for the Approved Claim Amount sum chart
-        fig_monthly_premium.update_layout(
+    # Create the grouped bar chart for monthly outliers
+    with cols2:
+        fig_monthly_outliers = go.Figure()
+
+        # Add trace for each Outlier Level
+        for i, outlier_level in enumerate(monthly_outliers["Outlier Level"].unique()):
+            filtered_data = monthly_outliers[monthly_outliers["Outlier Level"] == outlier_level]
+            fig_monthly_outliers.add_trace(
+                go.Bar(
+                    x=filtered_data["Month"],
+                    y=filtered_data["Count"],
+                    name=outlier_level,
+                    text=[f"{value}" for value in filtered_data["Count"]],
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],  # Assign color based on index
+                )
+            )
+
+        # Set layout for the chart
+        fig_monthly_outliers.update_layout(
             barmode='group',  # Grouped bar chart
             xaxis_title="Month",
-            yaxis_title="Claim Amount",
-            font=dict(color='Black'),
+            yaxis_title="Number of Outliers",
+            font=dict(color="Black"),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            margin=dict(l=0, r=0, t=30, b=50),
-            legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
-        )
-
-        # Display the Approved Claim Amount sum chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Monthly Claim Amount by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_monthly_premium, use_container_width=True)
-
-    # --- 2️⃣ BOX AND WHISKER PLOT FOR CLAIM AMOUNT ---
-    with col2:
-
-        
-        # Define lower and upper bounds for outliers
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        
-        # Create the box and whisker plot
-        fig_boxplot = go.Figure()
-        fig_boxplot.add_trace(go.Box(
-            y=df[column],
-            name="Claim Amount",
-            boxpoints='outliers', 
-            jitter=0.3, 
-            pointpos=-1.8,     
-            marker_color="#009DAE",
-            line_color="#e66c37",
-            fillcolor='rgba(93, 164, 214, 0.2)'
-        ))
-        
-        fig_boxplot.update_layout(
-            yaxis_title="Claim Amount",
-            font=dict(color='Black'),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             margin=dict(l=0, r=0, t=50, b=50),
-            height=450
-        )
-        
-        st.markdown('<h3 class="custom-subheader">Claims Abnormalities by Outliers</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_boxplot, use_container_width=True)
-
-
-
-    # Define lower and upper bounds for outliers
-    lower_bound_mild = Q1 - 1.5 * IQR
-    upper_bound_mild = Q3 + 1.5 * IQR
-    lower_bound_extreme = Q1 - 3 * IQR
-    upper_bound_extreme = Q3 + 3 * IQR
-
-    # Categorize data into "Normal", "Mild Outlier", and "Extreme Outlier"
-    df['Outlier Level'] = df[column].apply(
-        lambda x: "Extreme Outlier" if x < extreme_lower or x > extreme_upper 
-        else "Mild Outlier" if x < mild_lower or x > mild_upper 
-        else "Normal"
-    )
-    # Group by Outlier Level and aggregate Claim Amount and Claim Count
-    df_grouped = df.groupby(['Outlier Level']).agg({'Claim Amount': 'sum', 'Claim ID': 'count'}).reset_index()
-    df_grouped.rename(columns={'Claim ID': 'Claim Count'}, inplace=True)
-
-    # Define custom colors for each outlier level
-    outlier_colors = {
-        "Normal": "#009DAE",          # Blue for Normal claims
-        "Mild Outlier": "#461b09",    # Orange for Mild Outliers
-        "Extreme Outlier": "red"  # Dark Red for Extreme Outliers
-    }
-
-
-    # Assign colors to the grouped data
-    df_grouped['Color'] = df_grouped['Outlier Level'].map(outlier_colors)
-
-    with col1:
-        # Create a dual-axis bar and line chart
-        fig = go.Figure()
-
-        # Add bar trace for Claim Amount (using color mapping)
-        fig.add_trace(go.Bar(
-            x=df_grouped['Outlier Level'],
-            y=df_grouped['Claim Amount'],
-            name='Claim Amount',
-            text=[f'{value/1e6:.0f}M' for value in df_grouped['Claim Amount']],
-            textposition='auto',
-            marker_color=df_grouped['Color'],  # Apply color mapping
-            yaxis='y1'
-        ))
-
-        # Add line trace for Claim Count (using color mapping)
-        fig.add_trace(go.Scatter(
-            x=df_grouped['Outlier Level'],
-            y=df_grouped['Claim Count'],
-            name='Claim Count',
-            mode='lines+markers',
-            marker=dict(color=df_grouped['Color'], size=8),  # Apply color mapping
-            line=dict(color="gray"),  # Line color in gray for better distinction
-            yaxis='y2'
-        ))
-
-        fig.update_layout(
-            xaxis_title="Outlier Level",
-            yaxis=dict(
-                title="Claim Amount",
-                title_font=dict(color="gray"),  # Correct property name
-                tickfont=dict(color="gray")
-            ),
-            yaxis2=dict(
-                title="Number of Claims",
-                title_font=dict(color="gray"),  # Correct property name
-                tickfont=dict(color="gray"),
-                overlaying='y',
-                side='right'
-            ),
-            legend=dict(x=0, y=1.1, orientation='h'),
-            font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            margin=dict(l=0, r=0, t=30, b=50)
+            height=500,
+            legend=dict(title="Outlier Level"),
         )
 
         # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Claim Amount and Number of Claims by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown('<h3 class="custom-subheader">Number of Monthly Outliers</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_monthly_outliers, use_container_width=True)
 
+    # Group data by Year and Outlier Level to count occurrences
+    yearly_outliers = (
+        df.groupby(["Year", "Outlier Level"])["Claim ID"]
+        .count()
+        .reset_index(name="Count")
+    )
 
+    # Sort by Year
+    yearly_outliers = yearly_outliers.sort_values(by="Year")
 
+    # Create the grouped bar chart for yearly outliers
+    with cols1:
+        fig_yearly_outliers = go.Figure()
 
-    # Create two columns
+        # Add trace for each Outlier Level
+        for i, outlier_level in enumerate(yearly_outliers["Outlier Level"].unique()):
+            filtered_data = yearly_outliers[yearly_outliers["Outlier Level"] == outlier_level]
+            fig_yearly_outliers.add_trace(
+                go.Bar(
+                    x=filtered_data["Year"],
+                    y=filtered_data["Count"],
+                    name=outlier_level,
+                    text=[f"{value}" for value in filtered_data["Count"]],
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],  # Assign color based on index
+                )
+            )
 
-    # --- Chart 1: Claim Type by Outlier Level ---
-    # Group by Claim Type and Outlier Level, then sum the Claim Amount
-    df_grouped = df.groupby(['Claim Type', 'Outlier Level'])['Claim Amount'].sum().reset_index()
-    # Sort the df_grouped by Claim Amount in descending order
-    claim_type_df = df_grouped.sort_values(by='Claim Amount', ascending=False)
+        # Set layout for the chart
+        fig_yearly_outliers.update_layout(
+            barmode='group',  # Grouped bar chart
+            xaxis_title="Year",
+            yaxis_title="Number of Outliers",
+            font=dict(color="Black"),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            margin=dict(l=0, r=0, t=50, b=50),
+            height=500,
+            legend=dict(title="Outlier Level"),
+        )
 
-    with col2:
-        # Create the grouped bar chart
+        # Display the chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Number of Yearly Outliers</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_yearly_outliers, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+
+    # Group by Claim Type and Outlier Level, then count the number of claims
+    claim_type_count = (
+        df.groupby(['Claim Type', 'Outlier Level'])['Claim ID']
+        .count()
+        .reset_index(name="Count")
+    )
+
+    # Pivot the data for plotting (Outlier Level as columns)
+    pivot_claim_type = claim_type_count.pivot(
+        index="Claim Type", columns="Outlier Level", values="Count"
+    ).fillna(0)
+
+    # Ensure all outlier levels are present in the columns
+    pivot_claim_type = pivot_claim_type.reindex(columns=["Normal", "Mild Outlier", "Extreme Outlier"], fill_value=0)
+
+    with col1:
         fig_claim_type = go.Figure()
 
-        # Add bars for each Outlier Level
-        for outlier_level in claim_type_df['Outlier Level'].unique():
-            outlier_level_data = claim_type_df[claim_type_df['Outlier Level'] == outlier_level]
-            fig_claim_type.add_trace(go.Bar(
-                x=outlier_level_data['Claim Type'],
-                y=outlier_level_data['Claim Amount'],
-                name=outlier_level,
-                text=[f'{value/1e6:.0f}M' for value in outlier_level_data['Claim Amount']],
-                textposition='auto',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(pivot_claim_type.columns):
+            fig_claim_type.add_trace(
+                go.Bar(
+                    x=pivot_claim_type.index,
+                    y=pivot_claim_type[outlier_level],
+                    name=outlier_level,
+                    text=[f"{value}" for value in pivot_claim_type[outlier_level]],  # Show raw count
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],  # Assign color based on index
+                )
+            )
 
         # Set layout for the Claim Type chart
         fig_claim_type.update_layout(
             barmode='group',
-            yaxis_title="Claim Amount",
+            yaxis_title="Number of Claims",
             xaxis_title="Claim Type",
             font=dict(color='Black'),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
@@ -722,36 +735,48 @@ if not df.empty:
         )
 
         # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Claim Type Outlier Level by Claim Amount</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="custom-subheader">Number of Outliers by Claim Type </h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_claim_type, use_container_width=True)
+ 
 
-    # --- Chart 2: Provider Type by Outlier Level ---
-    # Group by Source (Provider Type) and Outlier Level, then sum the Claim Amount
-    df_grouped = df.groupby(['Source', 'Outlier Level'])['Claim Amount'].sum().reset_index()
-    # Sort the df_grouped by Claim Amount in descending order
-    provider_type_df = df_grouped.sort_values(by='Claim Amount', ascending=False)
+    # Group by Source and Outlier Level, then count the number of claims
+    source_count = (
+        df.groupby(['Source', 'Outlier Level'])['Claim ID']
+        .count()
+        .reset_index(name="Count")
+    )
 
-    with col1:
-        # Create the grouped bar chart
-        fig_provider_type = go.Figure()
+    # Pivot the data for plotting (Outlier Level as columns)
+    pivot_source = source_count.pivot(
+        index="Source", columns="Outlier Level", values="Count"
+    ).fillna(0)
 
-        # Add bars for each Outlier Level
-        for outlier_level in provider_type_df['Outlier Level'].unique():
-            outlier_level_data = provider_type_df[provider_type_df['Outlier Level'] == outlier_level]
-            fig_provider_type.add_trace(go.Bar(
-                x=outlier_level_data['Source'],
-                y=outlier_level_data['Claim Amount'],
-                name=outlier_level,
-                text=[f'{value/1e6:.0f}M' for value in outlier_level_data['Claim Amount']],
-                textposition='auto',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
+    # Ensure all outlier levels are present in the columns
+    pivot_source = pivot_source.reindex(columns=["Normal", "Mild Outlier", "Extreme Outlier"], fill_value=0)
 
-        # Set layout for the Provider Type chart
-        fig_provider_type.update_layout(
+    with col2:
+        fig_source = go.Figure()
+
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(pivot_source.columns):
+            fig_source.add_trace(
+                go.Bar(
+                    x=pivot_source.index,
+                    y=pivot_source[outlier_level],
+                    name=outlier_level,
+                    text=[f"{value}" for value in pivot_source[outlier_level]],  # Show raw count
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],  # Assign color based on index
+                )
+            )
+
+        # Set layout for the Source chart
+        fig_source.update_layout(
             barmode='group',
-            yaxis_title="Claim Amount",
-            xaxis_title="Provider Type",
+            yaxis_title="Number of Claims",
+            xaxis_title="Source",
             font=dict(color='Black'),
             xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
@@ -760,143 +785,117 @@ if not df.empty:
         )
 
         # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Provider Type Outlier Level by Claim Amount</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_provider_type, use_container_width=True)
+        st.markdown('<h3 class="custom-subheader">Number of Outliers by Provider Type</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_source, use_container_width=True)
 
 
+    cols1, cols2 = st.columns(2)
 
 
-    # --- Chart 1: Top 10 Diagnoses by Outlier Level ---
-    # Group by Diagnosis and Outlier Level, then sum the Claim Amount
-    df_grouped = df.groupby(['Diagnosis', 'Outlier Level'])['Claim Amount'].sum().reset_index()
+    # Group data by Provider Name and Outlier Level to count the number of claims
+    provider_outlier_count = (
+        df.groupby(["Employer Name", "Outlier Level"])["Claim ID"]
+        .count()
+        .reset_index(name="Count")
+    )
 
-    # Get the top 10 diagnoses by total Claim Amount
-    top_10_diagnoses = df_grouped.groupby('Diagnosis')['Claim Amount'].sum().nlargest(10).reset_index()
+    # Pivot the data for plotting (Outlier Level as columns)
+    pivot_provider_outlier = provider_outlier_count.pivot(
+        index="Employer Name", columns="Outlier Level", values="Count"
+    ).fillna(0)
 
-    # Filter the original DataFrame to include only the top 10 diagnoses
-    diagnosis_df = df_grouped[df_grouped['Diagnosis'].isin(top_10_diagnoses['Diagnosis'])]
+    # Sort providers by total number of claims
+    pivot_provider_outlier["Total"] = pivot_provider_outlier.sum(axis=1)
+    pivot_provider_outlier = (
+        pivot_provider_outlier.sort_values(by="Total", ascending=False).head(10).drop(columns=["Total"])
+    )
 
-    # Sort the diagnosis_df by Claim Amount in descending order
-    diagnosis_df = diagnosis_df.sort_values(by='Claim Amount', ascending=False)
+    with cols1:
+        fig_provider_outliers = go.Figure()
 
-    with col2:
-        # Create the grouped bar chart
-        fig_diagnosis = go.Figure()
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(pivot_provider_outlier.columns):
+            fig_provider_outliers.add_trace(
+                go.Bar(
+                    x=pivot_provider_outlier.index,
+                    y=pivot_provider_outlier[outlier_level],
+                    name=outlier_level,
+                    text=[f"{value}" for value in pivot_provider_outlier[outlier_level]],  # Show raw count
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],
+                )
+            )
 
-        # Add bars for each Outlier Level
-        for outlier_level in diagnosis_df['Outlier Level'].unique():
-            outlier_level_data = diagnosis_df[diagnosis_df['Outlier Level'] == outlier_level]
-            fig_diagnosis.add_trace(go.Bar(
-                x=outlier_level_data['Diagnosis'],
-                y=outlier_level_data['Claim Amount'],
-                name=outlier_level,
-                text=[f'{value/1e6:.0f}M' for value in outlier_level_data['Claim Amount']],
-                textposition='auto',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
-
-        # Set layout for the Diagnosis chart
-        fig_diagnosis.update_layout(
-            barmode='group',
-            yaxis_title="Claim Amount",
-            xaxis_title="Diagnosis",
-            font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=10)),  # Adjust tick font size for readability
+        # Set layout for the Number of Claims by Provider (Outlier Highlighted) chart
+        fig_provider_outliers.update_layout(
+            barmode="stack",  # Stacked bar chart
+            xaxis_title="Employer Name",
+            yaxis_title="Number of Claims",
+            font=dict(color="Black"),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12), tickangle=45),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             margin=dict(l=0, r=0, t=30, b=50),
-            legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
+            height=500,
+            legend=dict(x=0, y=1.1, orientation="h"),
         )
 
-        # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Top 10 Diagnoses by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_diagnosis, use_container_width=True)
-
-    # --- Chart 2: Top 10 ICD-10 Codes by Outlier Level ---
-    # Group by ICD-10 Code and Outlier Level, then sum the Claim Amount
-    df_grouped = df.groupby(['ICD-10 Code', 'Outlier Level'])['Claim Amount'].sum().reset_index()
-
-    # Get the top 10 ICD-10 codes by total Claim Amount
-    top_10_icd10 = df_grouped.groupby('ICD-10 Code')['Claim Amount'].sum().nlargest(10).reset_index()
-
-    # Filter the original DataFrame to include only the top 10 ICD-10 codes
-    icd10_df = df_grouped[df_grouped['ICD-10 Code'].isin(top_10_icd10['ICD-10 Code'])]
-
-    # Sort the icd10_df by Claim Amount in descending order
-    icd10_df = icd10_df.sort_values(by='Claim Amount', ascending=False)
-
-    with col1:
-        # Create the grouped bar chart
-        fig_icd10 = go.Figure()
-
-        # Add bars for each Outlier Level
-        for outlier_level in icd10_df['Outlier Level'].unique():
-            outlier_level_data = icd10_df[icd10_df['Outlier Level'] == outlier_level]
-            fig_icd10.add_trace(go.Bar(
-                x=outlier_level_data['ICD-10 Code'],
-                y=outlier_level_data['Claim Amount'],
-                name=outlier_level,
-                text=[f'{value/1e6:.0f}M' for value in outlier_level_data['Claim Amount']],
-                textposition='auto',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
-
-        # Set layout for the ICD-10 chart
-        fig_icd10.update_layout(
-            barmode='group',
-            yaxis_title="Claim Amount",
-            xaxis_title="ICD-10 Code",
-            font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=10)),  # Adjust tick font size for readability
-            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            margin=dict(l=0, r=0, t=30, b=50),
-            legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
-        )
-
-        # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Top 10 ICD-10 Codes by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_icd10, use_container_width=True)
+        # Display the Number of Claims by Provider (Outlier Highlighted) chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Top 10 Employer Groups by Outlier and Claim Count </h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_provider_outliers, use_container_width=True)
 
 
-    # Group by Provider Name and Outlier Level, then sum the Claim Amount
-    df_grouped = df.groupby(['Provider Name', 'Outlier Level'])['Claim Amount'].sum().reset_index()
+    # Group data by Provider Name and Outlier Level to count the number of claims
+    provider_outlier_count = (
+        df.groupby(["Provider Name", "Outlier Level"])["Claim ID"]
+        .count()
+        .reset_index(name="Count")
+    )
 
-    # Get the top 10 providers by total Claim Amount
-    top_10_providers = df_grouped.groupby('Provider Name')['Claim Amount'].sum().nlargest(10).reset_index()
+    # Pivot the data for plotting (Outlier Level as columns)
+    pivot_provider_outlier = provider_outlier_count.pivot(
+        index="Provider Name", columns="Outlier Level", values="Count"
+    ).fillna(0)
 
-    # Filter the original DataFrame to include only the top 10 providers
-    provider_df = df_grouped[df_grouped['Provider Name'].isin(top_10_providers['Provider Name'])]
+    # Sort providers by total number of claims
+    pivot_provider_outlier["Total"] = pivot_provider_outlier.sum(axis=1)
+    pivot_provider_outlier = (
+        pivot_provider_outlier.sort_values(by="Total", ascending=False).head(10).drop(columns=["Total"])
+    )
 
-    # Sort the provider_df by Claim Amount in descending order
-    provider_df = provider_df.sort_values(by='Claim Amount', ascending=False)
+    with cols2:
+        fig_provider_outliers = go.Figure()
 
-    with col2:
-        # Create the grouped bar chart
-        fig_providers = go.Figure()
+        # Add traces for each Outlier Level
+        for i, outlier_level in enumerate(pivot_provider_outlier.columns):
+            fig_provider_outliers.add_trace(
+                go.Bar(
+                    x=pivot_provider_outlier.index,
+                    y=pivot_provider_outlier[outlier_level],
+                    name=outlier_level,
+                    text=[f"{value}" for value in pivot_provider_outlier[outlier_level]],  # Show raw count
+                    textposition="inside",
+                    textfont=dict(color="white"),
+                    hoverinfo="x+y+name",
+                    marker_color=custom_colors[i % len(custom_colors)],
+                )
+            )
 
-        # Add bars for each Outlier Level
-        for outlier_level in provider_df['Outlier Level'].unique():
-            outlier_level_data = provider_df[provider_df['Outlier Level'] == outlier_level]
-            fig_providers.add_trace(go.Bar(
-                x=outlier_level_data['Provider Name'],
-                y=outlier_level_data['Claim Amount'],
-                name=outlier_level,
-                text=[f'{value/1e6:.0f}M' for value in outlier_level_data['Claim Amount']],
-                textposition='auto',
-                marker_color=custom_colors.get(outlier_level, "gray")  # Assign color based on outlier level
-            ))
-
-        # Set layout for the Provider Name chart
-        fig_providers.update_layout(
-            barmode='group',
-            yaxis_title="Claim Amount",
+        # Set layout for the Number of Claims by Provider (Outlier Highlighted) chart
+        fig_provider_outliers.update_layout(
+            barmode="stack",  # Stacked bar chart
             xaxis_title="Provider Name",
-            font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=10)),  # Adjust tick font size for readability
+            yaxis_title="Number of Claims",
+            font=dict(color="Black"),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12), tickangle=45),
             yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             margin=dict(l=0, r=0, t=30, b=50),
-            legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
+            height=500,
+            legend=dict(x=0, y=1.1, orientation="h"),
         )
 
-        # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Top 10 Service Providers by Outlier Level</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_providers, use_container_width=True)
+        # Display the Number of Claims by Provider (Outlier Highlighted) chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Top 10 Providers by Outlier and Claim Count </h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_provider_outliers, use_container_width=True)
+
