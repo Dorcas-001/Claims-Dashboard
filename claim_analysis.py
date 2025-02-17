@@ -620,7 +620,7 @@ if not df.empty:
             x=df_source_grouped['Month'],
             y=df_source_grouped['Total_Claims'],
             name='Number of Claims',
-            mode='lines+markers+text',  # Show lines, markers, and text
+            mode='lines+markers',  
             text=df_source_grouped['Total_Claims'],  # Display number of claims as text
             textposition='top center',
             textfont=dict(color='black', size=12),
@@ -795,7 +795,7 @@ if not df.empty:
             x=df_source_grouped['Source'],
             y=df_source_grouped['Total_Claims'],
             name='Number of Claims',
-            mode='lines+markers+text',  # Show lines, markers, and text
+            mode='lines+markers',  # Show lines, markers, and text
             text=df_source_grouped['Total_Claims'],  # Display number of claims as text
             textposition='top center',
             textfont=dict(color='black', size=12),
