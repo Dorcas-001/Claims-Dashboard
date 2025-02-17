@@ -425,14 +425,66 @@ if not df.empty:
 
         st.plotly_chart(fig2, use_container_width=True)
 
+    # Group data by "Year" and "Month" to calculate total claims and average claim amount
+    yearly_claim_data = df.groupby(['Year'])['Claim Amount'].agg(['mean', 'size']).reset_index()
 
+    # Format numbers with commas and rounding
+    yearly_claim_data['size_formatted'] = yearly_claim_data['size'].apply(lambda x: f'{x:,.0f}')  
+
+    # Yearly Chart: Total Claims and Average Claim Amount by Year
+    with cols2:
+        # Create the grouped bar chart for yearly data
+        fig_yearly_claims = go.Figure()
+
+        # Add trace for Total Claims (Count)
+        fig_yearly_claims.add_trace(go.Bar(
+            x=yearly_claim_data['Year'],
+            y=yearly_claim_data['size'],
+            name='Total Claims',
+            text=yearly_claim_data['size_formatted'],  # Use formatted text
+            textposition='inside',
+            textfont=dict(color='white'),
+            hoverinfo='x+y+name',
+            marker_color=custom_colors[0]
+        ))
+
+        # Add trace for Average Claim Amount
+        fig_yearly_claims.add_trace(go.Bar(
+            x=yearly_claim_data['Year'],
+            y=yearly_claim_data['mean'],  # Correct column name
+            name='Average Claim Amount',
+            text=[f'{value/1e3:.2f}K' for value in yearly_claim_data['mean']],  # Format as millions with 2 decimal places
+            textposition='inside',
+            textfont=dict(color='white'),
+            hoverinfo='x+y+name',
+            marker_color=custom_colors[1]
+        ))
+
+        # Set layout for the yearly chart
+        fig_yearly_claims.update_layout(
+            barmode='group',  # Grouped bar chart
+            xaxis_title="Year",
+            yaxis_title="Value",
+            font=dict(color='Black'),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            margin=dict(l=0, r=0, t=30, b=50),
+            height=450,
+            legend=dict(x=0, y=1.1, orientation='h')  # Place legend above the chart
+        )
+
+        # Display the yearly chart in Streamlit
+        st.markdown('<h3 class="custom-subheader">Yearly Total Claims and Average Claim Amount</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_yearly_claims, use_container_width=True)
+
+    cls1, cls2 = st.columns(2)
 
     # Group data by "Start Month Year" and "Claim Type" and calculate the average Approved Claim Amount
-    yearly_avg_premium = df.groupby(['Year', 'Claim Status'])['Claim Amount'].sum().unstack().fillna(0)
+    yearly_avg_premium = df.groupby(['Year', 'Claim Status'])['Claim Amount'].mean().unstack().fillna(0)
 
     # Define custom colors
 
-    with cols2:
+    with cls1:
         # Create the grouped bar chart
         fig_yearly_avg_premium = go.Figure()
 
@@ -459,8 +511,50 @@ if not df.empty:
         )
 
         # Display the chart in Streamlit
-        st.markdown('<h3 class="custom-subheader">Yearly Claim Amount by Claim Status per Employer Group</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="custom-subheader">Average Yearly Claim Amount by Claim Status </h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_yearly_avg_premium, use_container_width=True)
+   
+   
+    with cls2:
+
+        # Group the data by Claim Type and calculate the number of claims and total claim amount
+        df_claims_grouped = df.groupby('Claim Type').agg(
+            Total_Claims=pd.NamedAgg(column='Claim ID', aggfunc='count'),  # Count the number of claims per Claim Type
+            Total_Claim_Amount=pd.NamedAgg(column='Claim Amount', aggfunc='mean')  # Sum the claim amounts per Claim Type
+        ).reset_index()
+
+        # Create a scatter plot for Number of Claims vs Claim Amount by Claim Type
+        fig_claims_vs_amount = go.Figure()
+
+        # Loop over the grouped data to add scatter points for each claim type with custom colors
+        for idx, claim_type in enumerate(df_claims_grouped['Claim Type']):
+            fig_claims_vs_amount.add_trace(go.Scatter(
+                x=[df_claims_grouped.iloc[idx]['Total_Claims']],  # x-axis will be the Number of Claims for this claim type
+                y=[df_claims_grouped.iloc[idx]['Total_Claim_Amount']],  # y-axis will be the Claim Amount for this claim type
+                mode='markers',
+                name=claim_type,  # Label the point with the claim type
+                marker=dict(
+                    color=custom_colors[idx % len(custom_colors)],  # Cycle through custom colors based on the index
+                    size=10
+                ),
+                text=f"Claim Type: {claim_type}",  # Text shown on hover
+                hoverinfo='text+x+y'  # Show claim type and data when hovering
+            ))
+
+        # Update layout
+        fig_claims_vs_amount.update_layout(
+            yaxis_title="Claim Amount (M)",  # Label for the y-axis
+            xaxis_title="Number of Claims",  # Label for the x-axis
+            font=dict(color='Black'),
+            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+            margin=dict(l=0, r=0, t=50, b=50),
+            height=500,
+        )
+
+        st.markdown('<h3 class="custom-subheader">Number of Claims vs Claim Amount by Claim Type</h3>', unsafe_allow_html=True)
+        st.plotly_chart(fig_claims_vs_amount, use_container_width=True)
+
 
     # Group data by "Start Month" and "Channel" and sum the Approved Claim Amount sum
     monthly_premium = df.groupby(['Month', 'Claim Status'])['Claim Amount'].mean().unstack().fillna(0)
@@ -468,10 +562,7 @@ if not df.empty:
     # Group data by "Start Month" to count the number of sales
     monthly_sales_count = df.groupby(['Month']).size()
 
-
-
     # Create the layout columns
-    cls1, cls2 = st.columns(2)
 
     with cls2:
 
@@ -504,46 +595,80 @@ if not df.empty:
         st.markdown('<h3 class="custom-subheader">Avearge Monthly Claim Amount by Claim Status</h3>', unsafe_allow_html=True)
         st.plotly_chart(fig_monthly_premium, use_container_width=True)
 
- # Group data by month
-    monthly_visits = df.groupby('Month').size().reset_index(name='Number of Claims')
-    monthly_amount = df.groupby('Month')['Claim Amount'].sum().reset_index(name='Claim Amount')
 
-    # Merge monthly data for combined visualization
-    monthly_data = pd.merge(monthly_visits, monthly_amount, on='Month')
+    # Group by Source and calculate the total number of claims and total claim amount
+    df_source_grouped = df.groupby('Month').agg(
+        Total_Claims=pd.NamedAgg(column='Claim ID', aggfunc='count'),
+        Total_Claim_Amount=pd.NamedAgg(column='Claim Amount', aggfunc='sum')
+    ).reset_index()
 
-    # Create a dual-axis bar chart for monthly visits and total amount
-    fig_monthly = go.Figure()
+    # Sort the df_source_grouped by Total_Claims in descending order to find the most popular provider type
+    df_source_grouped = df_source_grouped.sort_values(by='Total_Claims', ascending=False)
 
-    # First y-axis (Number of Visits)
-    fig_monthly.add_trace(go.Bar(
-        x=monthly_data['Month'],
-        y=monthly_data['Number of Claims'],
-        name='Number of Claims',
-        marker_color='#e66c37',
-        yaxis='y1'
-    ))
+    # Get the most popular provider type
+    most_popular_provider = df_source_grouped.iloc[0]['Month'] if not df_source_grouped.empty else "No Data"
 
-    # Second y-axis (Total Visit Amount)
-    fig_monthly.add_trace(go.Bar(
-        x=monthly_data['Month'],
-        y=monthly_data['Claim Amount'],
-        name='Total Claim Amount',
-        marker_color='#009DAE',
-        yaxis='y2'
-    ))
+    # Format Claim Amount with millions
+    df_source_grouped['Claim_Amount_Formatted'] = df_source_grouped['Total_Claim_Amount'].apply(lambda x: f'{x/1e6:.0f}M')
 
-    fig_monthly.update_layout(
-        xaxis=dict(title="Month", tickangle=45),
-        yaxis=dict(title="Number of Claims", side='left'),
-        yaxis2=dict(title="Total Claim Amount", overlaying='y', side='right', showgrid=False),
-        barmode='group',
-        margin=dict(l=0, r=0, t=30, b=50),
-        height=450
-    )
-    # Display Monthly Chart
+    # Create the dual-axis chart (bar for claim amount, line for number of claims)
     with cls1:
+        fig1 = go.Figure()
+
+        # Add line for Number of Claims (using the left y-axis)
+        fig1.add_trace(go.Scatter(
+            x=df_source_grouped['Month'],
+            y=df_source_grouped['Total_Claims'],
+            name='Number of Claims',
+            mode='lines+markers+text',  # Show lines, markers, and text
+            text=df_source_grouped['Total_Claims'],  # Display number of claims as text
+            textposition='top center',
+            textfont=dict(color='black', size=12),
+            line=dict(color="#e66c37", width=2),
+            marker=dict(size=8, color="#e66c37"),
+            yaxis='y1'  # Assigning to the first y-axis
+        ))
+
+        # Add bars for Total Claim Amount (using the right y-axis)
+        fig1.add_trace(go.Bar(
+            x=df_source_grouped['Month'],
+            y=df_source_grouped['Total_Claim_Amount'],
+            name='Claim Amount',
+            text=df_source_grouped['Claim_Amount_Formatted'],  # Use formatted text
+            textposition='inside',
+            textfont=dict(color='white'),
+            marker_color="#009DAE",
+            yaxis='y2'  # Assigning to the second y-axis
+        ))
+
+        # Update layout for the dual-axis chart
+        fig1.update_layout(
+            barmode='group',  # Grouped bar chart
+            xaxis_title="Month",
+            yaxis=dict(
+                title="Number of Claims",
+                title_font=dict(size=14),
+                tickfont=dict(size=12),
+                side='left'  # Position the first y-axis on the left
+            ),
+            yaxis2=dict(
+                title="Claim Amount",
+                title_font=dict(size=14),
+                tickfont=dict(size=12),
+                showline=False,  # Hides the axis line
+                overlaying='y',  # Overlay the second y-axis over the first
+                side='right',  # Position the second y-axis on the right
+                showgrid=False  # Disable gridlines on the right y-axis
+            ),
+            font=dict(color='Black'),
+            margin=dict(l=0, r=0, t=30, b=50),
+            height=500,
+            legend=dict(title="Metrics", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+
         st.markdown('<h3 class="custom-subheader">Monthly Claims & Total Claim Amount Distribution</h3>', unsafe_allow_html=True)
-        st.plotly_chart(fig_monthly, use_container_width=True)
+        st.plotly_chart(fig1, use_container_width=True)
+
 
  
 
@@ -644,6 +769,8 @@ if not df.empty:
         st.plotly_chart(create_dual_axis_chart(df_grouped_icd, "ICD-10 Code", "Claim Amount", "Number of Claims", "ICD-10 Code"), use_container_width=True)
 
 
+
+
     # Group by Source and calculate the total number of claims and total claim amount
     df_source_grouped = df.groupby('Source').agg(
         Total_Claims=pd.NamedAgg(column='Claim ID', aggfunc='count'),
@@ -659,41 +786,58 @@ if not df.empty:
     # Format Claim Amount with millions
     df_source_grouped['Claim_Amount_Formatted'] = df_source_grouped['Total_Claim_Amount'].apply(lambda x: f'{x/1e6:.0f}M')
 
-    # Create the grouped bar chart
+    # Create the dual-axis chart (bar for claim amount, line for number of claims)
     with cls1:
         fig1 = go.Figure()
 
-        # Add bars for Total Claims
-        fig1.add_trace(go.Bar(
+        # Add line for Number of Claims (using the left y-axis)
+        fig1.add_trace(go.Scatter(
             x=df_source_grouped['Source'],
             y=df_source_grouped['Total_Claims'],
             name='Number of Claims',
-            text=df_source_grouped['Total_Claims'],
-            textposition='auto',
-            marker_color="#e66c37"
+            mode='lines+markers+text',  # Show lines, markers, and text
+            text=df_source_grouped['Total_Claims'],  # Display number of claims as text
+            textposition='top center',
+            textfont=dict(color='black', size=12),
+            line=dict(color="#e66c37", width=2),
+            marker=dict(size=8, color="#e66c37"),
+            yaxis='y1'  # Assigning to the first y-axis
         ))
 
-        # Add bars for Total Claim Amount
+        # Add bars for Total Claim Amount (using the right y-axis)
         fig1.add_trace(go.Bar(
             x=df_source_grouped['Source'],
             y=df_source_grouped['Total_Claim_Amount'],
             name='Claim Amount',
             text=df_source_grouped['Claim_Amount_Formatted'],  # Use formatted text
-            textposition='auto',
-            marker_color="#009DAE"
+            textposition='inside',
+            textfont=dict(color='white'),
+            marker_color="#009DAE",
+            yaxis='y2'  # Assigning to the second y-axis
         ))
 
-        # Update layout for the grouped bar chart
+        # Update layout for the dual-axis chart
         fig1.update_layout(
             barmode='group',  # Grouped bar chart
-            yaxis_title="Value",
             xaxis_title="Provider Type",
+            yaxis=dict(
+                title="Number of Claims",
+                title_font=dict(size=14),
+                tickfont=dict(size=12),
+                side='left'  # Position the first y-axis on the left
+            ),
+            yaxis2=dict(
+                title="Claim Amount",
+                title_font=dict(size=14),
+                tickfont=dict(size=12),
+                overlaying='y',  # Overlay the second y-axis over the first
+                side='right',  # Position the second y-axis on the right
+                showgrid=False  # Disable gridlines on the right y-axis
+            ),
             font=dict(color='Black'),
-            xaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-            yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
             margin=dict(l=0, r=0, t=30, b=50),
             height=500,
-            legend=dict(title="Metrics")
+            legend=dict(title="Metrics", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
         # Display the chart in Streamlit
